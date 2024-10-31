@@ -1,13 +1,15 @@
-import logo from './logo.svg';
-import './App.css';
-import Quiz from './utils/Quiz';
+import React from "react";
+import { Route, Routes } from "react-router-dom";
+import Quiz from "./utils/Quiz"; 
+import Result from "./utils/Result";
 
-function App() {
+const App = () => {
   return (
-    <div>
-      <Quiz/>
-  </div>
+    <Routes>
+      <Route path="/" element={<Quiz />} />
+      <Route path="/results" element={<Result />} />
+    </Routes>
   );
-}
+};
 
 export default App;

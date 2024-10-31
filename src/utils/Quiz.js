@@ -1,8 +1,11 @@
-// src/Quiz.js
-import React, { useState, useEffect } from "react";
 import axios from "axios";
+import { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 
 const Quiz = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
   const [question, setQuestion] = useState(null);
   const [options, setOptions] = useState([]);
   const [score, setScore] = useState(0);
@@ -13,12 +16,10 @@ const Quiz = () => {
   const [playerName, setPlayerName] = useState("");
   const [categories, setCategories] = useState([]);
   const [difficulty, setDifficulty] = useState("easy");
-  const [numQuestions, setNumQuestions] = useState(5);
+  const [numQuestions, setNumQuestions] = useState(5); // Default to 5
   const [questionsRemaining, setQuestionsRemaining] = useState(numQuestions);
   const [gameEnded, setGameEnded] = useState(false);
-  const [showModal, setShowModal] = useState(false);
-  const [answeredQuestions, setAnsweredQuestions] = useState([]); // New state for answered questions
-  const [showResults, setShowResults] = useState(false); // New state for showing results
+  const [answeredQuestions, setAnsweredQuestions] = useState([]);
 
   useEffect(() => {
     loadCategories();
@@ -30,14 +31,13 @@ const Quiz = () => {
       return () => clearTimeout(countdown);
     } else if (timer === 0) {
       setIsAnswered(true);
-      setTimeout(handleNextQuestion, 1000);
+      handleAnswer(""); 
     }
   }, [timer, gameStarted, isAnswered]);
 
   useEffect(() => {
     if (questionsRemaining === 0) {
       setGameEnded(true);
-      setShowModal(true); // Show modal when game ends
     }
   }, [questionsRemaining]);
 
@@ -63,13 +63,12 @@ const Quiz = () => {
         setQuestion(fetchedQuestion);
         setOptions(
           shuffleOptions([
-            ...fetchedQuestion.incorrectAnswers,
             fetchedQuestion.correctAnswer,
+            ...fetchedQuestion.incorrectAnswers,
           ])
         );
         setIsAnswered(false);
         setTimer(10);
-        setQuestionsRemaining(questionsRemaining - 1);
       } catch (error) {
         console.error("Error fetching question", error);
       }
@@ -79,41 +78,45 @@ const Quiz = () => {
   const shuffleOptions = (optionsArray) =>
     optionsArray.sort(() => Math.random() - 0.5);
 
-  const handleOptionClick = (selectedOption) => {
+  const handleAnswer = (selectedOption) => {
     if (!isAnswered) {
       const isCorrect = selectedOption === question.correctAnswer;
+
       if (isCorrect) {
         setScore(score + 1);
       }
 
-      // Save the answered question
       setAnsweredQuestions((prev) => [
         ...prev,
         {
           question: question.question,
           selectedOption,
           isCorrect,
+          correctAnswer: question.correctAnswer,
         },
       ]);
 
       setIsAnswered(true);
-      setTimeout(handleNextQuestion, 1000);
-    }
-  };
-
-  const handleNextQuestion = () => {
-    loadQuestion();
-    if (questionsRemaining === 1) {
-      setGameEnded(true);
-      setShowModal(true); // Show modal when the game ends
+      setQuestionsRemaining((prev) => prev - 1); 
+      if (questionsRemaining === 1) {
+        setGameEnded(true);
+      } else {
+        setTimeout(loadQuestion, 1000); 
+      }
     }
   };
 
   const handleStartGame = () => {
+    setScore(0);
     setQuestionsRemaining(numQuestions);
     setGameStarted(true);
-    setAnsweredQuestions([]); // Reset answered questions
+    setAnsweredQuestions([]);
     loadQuestion();
+  };
+
+  const handleRestartGame = () => {
+    setGameEnded(false);
+    handleStartGame();
   };
 
   const getRemarks = () => {
@@ -122,16 +125,22 @@ const Quiz = () => {
     return "Better luck next time!";
   };
 
-  const handleModalClose = () => {
-    setShowModal(false);
-    setShowResults(false); // Reset results visibility
+  const handleViewResults = () => {
+    navigate("/results", {
+      state: {
+        score,
+        totalQuestions: numQuestions,
+        answeredQuestions,
+        playerName,
+      },
+    });
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">
+    <div className="flex flex-col items-center justify-center min-h-screen p-4">
       {!gameStarted ? (
-        <div className="bg-white shadow-lg rounded-lg p-8 w-full max-w-xl text-center">
-          <h1 className="text-3xl font-bold text-gray-800 mb-6">
+        <div className="bg-black-700 shadow-lg rounded-lg p-8 w-full max-w-xl text-center border border-gray-200">
+          <h1 className="text-4xl font-bold text-gray-800 mb-6">
             Trivia Quiz Game
           </h1>
           <div className="mb-4">
@@ -142,7 +151,7 @@ const Quiz = () => {
               type="text"
               value={playerName}
               onChange={(e) => setPlayerName(e.target.value)}
-              className="ml-2 px-4 py-2 border rounded-lg"
+              className="ml-2 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring focus:ring-green-300"
               placeholder="Your Name"
             />
           </div>
@@ -153,7 +162,7 @@ const Quiz = () => {
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className="ml-2 px-4 py-2 border rounded-lg"
+              className="ml-2 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring focus:ring-green-300"
             >
               <option value="">Choose Category</option>
               {categories.map((category, index) => (
@@ -170,7 +179,7 @@ const Quiz = () => {
             <select
               value={difficulty}
               onChange={(e) => setDifficulty(e.target.value)}
-              className="ml-2 px-4 py-2 border rounded-lg"
+              className="ml-2 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring focus:ring-green-300"
             >
               <option value="easy">Easy</option>
               <option value="medium">Medium</option>
@@ -186,7 +195,7 @@ const Quiz = () => {
               value={numQuestions}
               onChange={(e) => setNumQuestions(Math.max(1, e.target.value))}
               min="1"
-              className="ml-2 px-4 py-2 border rounded-lg"
+              className="ml-2 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring focus:ring-green-300"
             />
           </div>
           <button
@@ -199,13 +208,12 @@ const Quiz = () => {
         </div>
       ) : (
         <>
-          <h1 className="text-3xl font-bold text-gray-800 mb-6">
+          <h1 className="text-4xl font-bold text-gray-800 mb-6">
             Trivia Quiz Game
           </h1>
-          <div className="bg-white shadow-lg rounded-lg w-full max-w-xl relative">
-            {/* Timer Progress Bar on Top */}
+          <div className="bg-white shadow-lg rounded-lg w-full max-w-xl relative border border-gray-200">
             <div
-              className="absolute top-0 left-0 h-2"
+              className="absolute top-0 left-0 h-1"
               style={{
                 width: `${(timer / 10) * 100}%`,
                 backgroundColor: timer > 5 ? "green" : "red",
@@ -216,14 +224,15 @@ const Quiz = () => {
             <div className="p-8">
               {question && (
                 <>
-                  <h2 className="text-xl font-semibold text-gray-700 mb-4">
+                  <h2 className="text-2xl font-semibold text-gray-700 mb-4">
                     {question.question}
                   </h2>
                   <div className="grid gap-4 mb-6">
                     {options.map((option, index) => (
                       <button
                         key={index}
-                        onClick={() => handleOptionClick(option)}
+                        onClick={() => handleAnswer(option)}
+                        tabIndex="0"
                         className={`py-2 px-4 rounded-lg font-medium text-gray-700 border ${
                           isAnswered && option === question.correctAnswer
                             ? "bg-green-400 text-white"
@@ -242,105 +251,36 @@ const Quiz = () => {
                 </>
               )}
             </div>
-
-            {/* Timer Progress Bar on Bottom */}
-            <div
-              className="absolute bottom-0 left-0 h-2"
-              style={{
-                width: `${(timer / 10) * 100}%`,
-                backgroundColor: timer > 5 ? "green" : "red",
-                transition: "width 1s ease-in-out",
-              }}
-            ></div>
           </div>
 
           <div className="mt-4 text-lg text-gray-700">
             Score: <span className="font-semibold">{score}</span>
           </div>
-
           <div className="mt-4 text-lg text-gray-700">
             Time Left: <span className="font-semibold">{timer} seconds</span>
           </div>
-
-          <div className="mt-4 text-lg text-gray-700">
-            Player: <span className="font-semibold">{playerName}</span>
-          </div>
-
-          <div className="mt-4 text-lg text-gray-700">
-            Questions Remaining:{" "}
-            <span className="font-semibold">{questionsRemaining}</span>
-          </div>
-
-          {gameEnded && showModal && (
-            <div
-              className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center"
-              onClick={handleModalClose}
-            >
-              <div
-                className="bg-white rounded-lg p-6 max-w-sm w-full"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <h2 className="text-2xl font-bold mb-4">Game Over!</h2>
-                <p>
-                  Your Score: <span className="font-semibold">{score}</span>
-                </p>
-                <p>{getRemarks()}</p>
+          <div className="mt-4">
+            {gameEnded && (
+              <div className="mt-4 text-center">
+                <h2 className="text-2xl font-bold text-gray-800 mb-2">
+                  Game Over!
+                </h2>
+                <p className="text-lg text-gray-600">{getRemarks()}</p>
                 <button
-                  onClick={handleModalClose}
-                  className="mt-4 py-2 px-4 bg-blue-500 text-white rounded-lg"
-                >
-                  Close
-                </button>
-                <button
-                  onClick={() => setShowResults(true)} // Show results
-                  className="mt-4 py-2 px-4 bg-gray-500 text-white rounded-lg"
+                  onClick={handleViewResults}
+                  className="py-2 px-4 bg-blue-500 hover:bg-blue-600 text-white rounded-lg mt-4"
                 >
                   View Results
                 </button>
+                <button
+                  onClick={handleRestartGame}
+                  className="py-2 px-4 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg mt-4 ml-4"
+                >
+                  Restart Game
+                </button>
               </div>
-            </div>
-          )}
-
-          {showResults && (
-            <div className="bg-white shadow-lg rounded-lg w-full max-w-xl p-6 mt-4">
-              <h2 className="text-2xl font-bold mb-4">
-                Results for {playerName}
-              </h2>
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead>
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Question
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Your Answer
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Result
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {answeredQuestions.map((q, index) => (
-                    <tr
-                      key={index}
-                      className={q.isCorrect ? "bg-green-100" : "bg-red-100"}
-                    >
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {q.question}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {q.selectedOption}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {q.isCorrect ? "Correct" : "Wrong"}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+            )}
+          </div>
         </>
       )}
     </div>
