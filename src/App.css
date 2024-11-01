@@ -28,3 +28,28 @@
 .animate-pulse {
   animation: pulse 2s infinite;
 }
+.form-body-custom {
+  max-width: 63.5% !important;
+}
+  .input-field-adjustment select{
+    width: 70% !important;
+  }
+@media (max-width: 768px) {
+  .form-body-custom {
+    max-width: unset !important;
+  }
+}
+.input-field-adjustment input {
+  width: 70% !important;
+}
+@media (max-width: 768px) {
+  .input-field-adjustment input {
+    width: 100% !important;
+  }
+   .input-field-adjustment select{
+    width: 100% !important;
+  }
+  .start-label-custom{
+    width: 100%;
+  }
+}

@@ -1,7 +1,7 @@
 import axios from "axios";
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { motion } from "framer-motion"; 
+import { motion } from "framer-motion";
 import { CircularProgressbar, buildStyles } from "react-circular-progressbar";
 import { FaLongArrowAltRight } from "react-icons/fa";
 
@@ -61,7 +61,7 @@ const Quiz = () => {
   const [selectedCategory, setSelectedCategory] = useState("");
   const [playerName, setPlayerName] = useState("");
   const [categories, setCategories] = useState([]);
-  
+
   const [difficulty, setDifficulty] = useState("easy");
   const [numQuestions, setNumQuestions] = useState(5);
   const [questionsRemaining, setQuestionsRemaining] = useState(numQuestions);
@@ -135,47 +135,46 @@ const Quiz = () => {
   const shuffleOptions = (optionsArray) =>
     optionsArray.sort(() => Math.random() - 0.5);
 
-const handleAnswer = (selectedOption) => {
-  if (!isAnswered) {
-    const isCorrect = selectedOption === question.correctAnswer;
+  const handleAnswer = (selectedOption) => {
+    if (!isAnswered) {
+      const isCorrect = selectedOption === question.correctAnswer;
 
-    let scoreForQuestion = 400;
-    if (timer > 5) {
-      scoreForQuestion += (timer - 5) * 40;
-    } else if (timer <= 5) {
-      scoreForQuestion -= (5 - timer) * 40;
+      let scoreForQuestion = 400;
+      if (timer > 5) {
+        scoreForQuestion += (timer - 5) * 40;
+      } else if (timer <= 5) {
+        scoreForQuestion -= (5 - timer) * 40;
+      }
+
+      scoreForQuestion = Math.max(scoreForQuestion, 0);
+
+      if (isCorrect) {
+        setScore((prevScore) => prevScore + scoreForQuestion);
+        setScoreUpdateColor("text-green-500");
+      } else {
+        setScoreUpdateColor("text-red-500");
+      }
+
+      setAnsweredQuestions((prev) => [
+        ...prev,
+        {
+          question: question.question,
+          selectedOption,
+          isCorrect,
+          correctAnswer: question.correctAnswer,
+          score: scoreForQuestion,
+        },
+      ]);
+
+      setIsAnswered(true);
+      setQuestionsRemaining((prev) => prev - 1);
+      setCurrentQuestionIndex((prevIndex) => prevIndex + 1);
+
+      setTimeout(() => {
+        setScoreUpdateColor("text-gray-700");
+      }, 1500);
     }
-
-    scoreForQuestion = Math.max(scoreForQuestion, 0);
-
-    if (isCorrect) {
-      setScore((prevScore) => prevScore + scoreForQuestion);
-      setScoreUpdateColor("text-green-500");
-    } else {
-      setScoreUpdateColor("text-red-500");
-    }
-
-    setAnsweredQuestions((prev) => [
-      ...prev,
-      {
-        question: question.question,
-        selectedOption,
-        isCorrect,
-        correctAnswer: question.correctAnswer,
-        score: scoreForQuestion,
-      },
-    ]);
-
-    setIsAnswered(true);
-    setQuestionsRemaining((prev) => prev - 1);
-    setCurrentQuestionIndex((prevIndex) => prevIndex + 1);
-
-    setTimeout(() => {
-      setScoreUpdateColor("text-gray-700");
-    }, 1500);
-  }
-};
-
+  };
 
   const handleNextQuestion = () => {
     if (questionsRemaining > 0) {
@@ -188,6 +187,11 @@ const handleAnswer = (selectedOption) => {
 const handleStartGame = () => {
   let valid = true;
 
+  // Log the current values for debugging
+  console.log("Player Name:", playerName);
+  console.log("Selected Category:", selectedCategory);
+  console.log("Number of Questions:", numQuestions);
+
   if (playerName.trim() === "") {
     setErrorMessage("Please enter your name.");
     valid = false;
@@ -197,21 +201,26 @@ const handleStartGame = () => {
   } else if (numQuestions <= 0 || isNaN(numQuestions)) {
     setErrorMessage("Please select a valid number of questions.");
     valid = false;
+  } else if (numQuestions > 50) {
+    // Assuming a maximum of 50 questions
+    setErrorMessage("Please select a number of questions up to 50.");
+    valid = false;
   }
 
   if (valid) {
-    setErrorMessage("");
+    setErrorMessage(""); // Clear error if valid
     setScore(0);
     setQuestionsRemaining(numQuestions);
     setGameStarted(true);
     setAnsweredQuestions([]);
-    // Do not call loadQuestion here, we want to wait for user action
   }
 };
 
-const handleFirstQuestion = () => {
-  loadQuestion(); // This will now load the first question
-};
+
+
+  const handleFirstQuestion = () => {
+    loadQuestion(); // This will now load the first question
+  };
   const handleStopGame = () => {
     setGameEnded(true);
     navigate("/results", {
@@ -267,33 +276,31 @@ const handleFirstQuestion = () => {
     <div className="flex flex-col items-center justify-center min-h-screen p-4">
       {!gameStarted ? (
         <div
-          className="bg-black-700 shadow-lg rounded-lg p-8 w-full max-w-xl text-center border border-gray-200"
-          style={{ maxWidth: "63.5%", height: "80%" }}
+          className="bg-black-700 shadow-lg px-5 form-body-custom rounded-lg p-8 w-full max-w-xl text-center border border-gray-200"
+          style={{ height: "80%" }}
         >
-          <h1 className="text-4xl font-bold text-gray-800 mb-6">
-            Trivia Quiz Game
-          </h1>
+          <h1 className="text-3xl font-bold text-gray-800 mb-6">Quiz Game</h1>
           <div>
-            <div className="mb-4">
-              <label className="text-lg font-medium text-gray-700">
+            <div className="mb-4 flex items-center input-field-adjustment flex-col md:flex-row justify-between">
+              <label className="text-lg font-medium text-gray-700 start-label-custom text-start my-3">
                 Enter Your Name:
               </label>
               <input
                 type="text"
                 value={playerName}
                 onChange={(e) => setPlayerName(e.target.value)}
-                className="ml-2 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring focus:ring-green-300"
+                className=" px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring focus:ring-green-300"
                 placeholder="Your Name"
               />
             </div>
-            <div className="mb-4">
-              <label className="text-lg font-medium text-gray-700">
+            <div className="mb-4 input-field-adjustment  flex items-center flex-col md:flex-row justify-between">
+              <label className="text-lg font-medium text-gray-700 start-label-custom text-start my-3">
                 Select Category:
               </label>
               <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
-                className="ml-2 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring focus:ring-green-300"
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring focus:ring-green-300"
               >
                 <option value="">Choose Category</option>
                 {categories.map((category, index) => (
@@ -303,23 +310,24 @@ const handleFirstQuestion = () => {
                 ))}
               </select>
             </div>
-            <div className="mb-4">
-              <label className="text-lg font-medium text-gray-700">
+            <div className="mb-4 input-field-adjustment flex items-center flex-col md:flex-row justify-between">
+              <label className="text-lg font-medium text-gray-700 start-label-custom text-start my-3">
                 Select Difficulty:
               </label>
               <select
                 value={difficulty}
                 onChange={(e) => setDifficulty(e.target.value)}
-                className="ml-2 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring focus:ring-green-300"
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring focus:ring-green-300 m-0"
+                style={{ width: "70%" }}
               >
                 <option value="easy">Easy</option>
                 <option value="medium">Medium</option>
                 <option value="hard">Hard</option>
               </select>
             </div>
-            <div className="mb-4">
-              <label className="text-lg font-medium text-gray-700">
-                Number of Questions:
+            <div className="mb-4 input-field-adjustment flex items-center flex-col md:flex-row justify-between">
+              <label className="text-lg font-medium text-gray-700 start-label-custom text-start my-3">
+                No of Questions:
               </label>
               <input
                 type="number"
@@ -328,19 +336,27 @@ const handleFirstQuestion = () => {
                   setNumQuestions(Math.max(1, Number(e.target.value)))
                 }
                 min="1"
-                className="ml-2 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring focus:ring-green-300"
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring focus:ring-green-300"
+                style={{ width: "70%" }}
               />
             </div>
             {errorMessage && (
               <div className="text-red-500 mb-4">{errorMessage}</div>
             )}
-            <button
-              onClick={handleStartGame}
-              className="py-2 px-6 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium transition-colors mt-4"
-              disabled={!selectedCategory || playerName.trim() === ""}
-            >
-              Start Game
-            </button>
+            <div className="flex justify-end">
+              <button
+                onClick={() => {
+                  console.log("Player Name:", playerName);
+                  console.log("Selected Category:", selectedCategory);
+                  console.log("Number of Questions:", numQuestions);
+                  handleStartGame();
+                }}
+                className="py-2 px-6 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium transition-colors"
+                disabled={!selectedCategory || playerName.trim() === ""}
+              >
+                Start Game
+              </button>
+            </div>
           </div>
         </div>
       ) : (
