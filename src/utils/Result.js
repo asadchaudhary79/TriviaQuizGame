@@ -25,7 +25,7 @@ const Result = () => {
           Player: <span className="font-bold text-blue-600">{playerName}</span>
         </h2>
         <p className="text-lg mb-4 font-medium text-gray-700">
-          Score: <span className="font-bold">{score}</span> / {totalQuestions}
+          Score: <span className="font-bold">{score}</span> 
         </p>
         <h3 className="text-xl mb-6 font-medium text-gray-700">
           {score === totalQuestions

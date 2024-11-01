@@ -1,6 +1,52 @@
 import axios from "axios";
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { motion } from "framer-motion"; 
+import { CircularProgressbar, buildStyles } from "react-circular-progressbar";
+import { FaLongArrowAltRight } from "react-icons/fa";
+
+const CircularTimer = ({ timer, isTimerEnded }) => {
+  const radius = 25;
+  const strokeWidth = 2;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (timer / 20) * circumference;
+
+  return (
+    <svg width="60" height="60" style={{ transform: "rotate(-80deg)" }}>
+      <circle
+        cx="30"
+        cy="30"
+        r={radius}
+        stroke="gray"
+        strokeWidth={strokeWidth}
+        fill="none"
+      />
+      <circle
+        cx="30"
+        cy="30"
+        r={radius}
+        stroke={isTimerEnded ? "red" : "black"}
+        strokeWidth={strokeWidth}
+        fill="none"
+        strokeDasharray={circumference}
+        strokeDashoffset={offset}
+        style={{
+          transition: "stroke-dashoffset 1s ",
+        }}
+      />
+      <text
+        x="30"
+        y="36"
+        textAnchor="middle"
+        fontSize="16"
+        fill="black"
+        style={{ transform: "rotate(80deg)", transformOrigin: "center" }}
+      >
+        {timer}
+      </text>
+    </svg>
+  );
+};
 
 const Quiz = () => {
   const navigate = useNavigate();
@@ -15,12 +61,21 @@ const Quiz = () => {
   const [selectedCategory, setSelectedCategory] = useState("");
   const [playerName, setPlayerName] = useState("");
   const [categories, setCategories] = useState([]);
+  
   const [difficulty, setDifficulty] = useState("easy");
   const [numQuestions, setNumQuestions] = useState(5);
   const [questionsRemaining, setQuestionsRemaining] = useState(numQuestions);
   const [gameEnded, setGameEnded] = useState(false);
   const [answeredQuestions, setAnsweredQuestions] = useState([]);
   const [errorMessage, setErrorMessage] = useState("");
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [timerEnded, setTimerEnded] = useState(false);
+  const [scoreUpdateColor, setScoreUpdateColor] = useState("text-gray-700");
+
+  const shakeAnimation = {
+    hidden: { x: 0 },
+    visible: { x: [0, -5, 5, -5, 0], transition: { duration: 0.5 } },
+  };
 
   useEffect(() => {
     loadCategories();
@@ -31,8 +86,8 @@ const Quiz = () => {
       const countdown = setTimeout(() => setTimer(timer - 1), 1000);
       return () => clearTimeout(countdown);
     } else if (timer === 0) {
+      setTimerEnded(true);
       setIsAnswered(true);
-      handleAnswer("");
     }
   }, [timer, gameStarted, isAnswered]);
 
@@ -69,7 +124,8 @@ const Quiz = () => {
           ])
         );
         setIsAnswered(false);
-        setTimer(10);
+        setTimer(20);
+        setTimerEnded(false);
       } catch (error) {
         console.error("Error fetching question", error);
       }
@@ -79,58 +135,83 @@ const Quiz = () => {
   const shuffleOptions = (optionsArray) =>
     optionsArray.sort(() => Math.random() - 0.5);
 
-  const handleAnswer = (selectedOption) => {
-    if (!isAnswered) {
-      const isCorrect = selectedOption === question.correctAnswer;
+const handleAnswer = (selectedOption) => {
+  if (!isAnswered) {
+    const isCorrect = selectedOption === question.correctAnswer;
 
-      if (isCorrect) {
-        setScore(score + 1);
-      }
-
-      setAnsweredQuestions((prev) => [
-        ...prev,
-        {
-          question: question.question,
-          selectedOption,
-          isCorrect,
-          correctAnswer: question.correctAnswer,
-        },
-      ]);
-
-      setIsAnswered(true);
-      setQuestionsRemaining((prev) => prev - 1);
-      if (questionsRemaining === 1) {
-        setGameEnded(true);
-      } else {
-        setTimeout(loadQuestion, 1000);
-      }
-    }
-  };
-
-  const handleStartGame = () => {
-    let valid = true;
-
-    if (playerName.trim() === "") {
-      setErrorMessage("Please enter your name.");
-      valid = false;
-    } else if (selectedCategory === "") {
-      setErrorMessage("Please select a category.");
-      valid = false;
-    } else if (numQuestions <= 0 || isNaN(numQuestions)) {
-      setErrorMessage("Please select a valid number of questions.");
-      valid = false;
+    let scoreForQuestion = 400;
+    if (timer > 5) {
+      scoreForQuestion += (timer - 5) * 40;
+    } else if (timer <= 5) {
+      scoreForQuestion -= (5 - timer) * 40;
     }
 
-    if (valid) {
-      setErrorMessage("");
-      setScore(0);
-      setQuestionsRemaining(numQuestions);
-      setGameStarted(true);
-      setAnsweredQuestions([]);
+    scoreForQuestion = Math.max(scoreForQuestion, 0);
+
+    if (isCorrect) {
+      setScore((prevScore) => prevScore + scoreForQuestion);
+      setScoreUpdateColor("text-green-500");
+    } else {
+      setScoreUpdateColor("text-red-500");
+    }
+
+    setAnsweredQuestions((prev) => [
+      ...prev,
+      {
+        question: question.question,
+        selectedOption,
+        isCorrect,
+        correctAnswer: question.correctAnswer,
+        score: scoreForQuestion,
+      },
+    ]);
+
+    setIsAnswered(true);
+    setQuestionsRemaining((prev) => prev - 1);
+    setCurrentQuestionIndex((prevIndex) => prevIndex + 1);
+
+    setTimeout(() => {
+      setScoreUpdateColor("text-gray-700");
+    }, 1500);
+  }
+};
+
+
+  const handleNextQuestion = () => {
+    if (questionsRemaining > 0) {
       loadQuestion();
+    } else {
+      setGameEnded(true);
     }
   };
 
+const handleStartGame = () => {
+  let valid = true;
+
+  if (playerName.trim() === "") {
+    setErrorMessage("Please enter your name.");
+    valid = false;
+  } else if (selectedCategory === "") {
+    setErrorMessage("Please select a category.");
+    valid = false;
+  } else if (numQuestions <= 0 || isNaN(numQuestions)) {
+    setErrorMessage("Please select a valid number of questions.");
+    valid = false;
+  }
+
+  if (valid) {
+    setErrorMessage("");
+    setScore(0);
+    setQuestionsRemaining(numQuestions);
+    setGameStarted(true);
+    setAnsweredQuestions([]);
+    // Do not call loadQuestion here, we want to wait for user action
+  }
+};
+
+const handleFirstQuestion = () => {
+  loadQuestion(); // This will now load the first question
+};
   const handleStopGame = () => {
     setGameEnded(true);
     navigate("/results", {
@@ -150,11 +231,18 @@ const Quiz = () => {
     setSelectedCategory("");
     setNumQuestions(5);
     setErrorMessage("");
+    setCurrentQuestionIndex(0);
+    setScore(0);
+    setQuestionsRemaining(numQuestions);
+    setAnsweredQuestions([]);
+    setTimer(10);
+    setTimerEnded(false);
+    setScoreUpdateColor("text-gray-700");
   };
 
   const getRemarks = () => {
-    if (score === numQuestions) return "Perfect score!";
-    if (score >= numQuestions / 2) return "Good job!";
+    if (score === numQuestions * 400) return "Perfect score!";
+    if (score >= (numQuestions * 400) / 2) return "Good job!";
     return "Better luck next time!";
   };
 
@@ -169,10 +257,19 @@ const Quiz = () => {
     });
   };
 
+  useEffect(() => {
+    if (gameStarted) {
+      loadQuestion();
+    }
+  }, [gameStarted, selectedCategory, difficulty, numQuestions]);
+
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4">
       {!gameStarted ? (
-        <div className="bg-black-700 shadow-lg rounded-lg p-8 w-full max-w-xl text-center border border-gray-200">
+        <div
+          className="bg-black-700 shadow-lg rounded-lg p-8 w-full max-w-xl text-center border border-gray-200"
+          style={{ maxWidth: "63.5%", height: "80%" }}
+        >
           <h1 className="text-4xl font-bold text-gray-800 mb-6">
             Trivia Quiz Game
           </h1>
@@ -185,7 +282,7 @@ const Quiz = () => {
                 type="text"
                 value={playerName}
                 onChange={(e) => setPlayerName(e.target.value)}
-                className="ml-2 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring focus:ring-green-300 "
+                className="ml-2 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring focus:ring-green-300"
                 placeholder="Your Name"
               />
             </div>
@@ -251,59 +348,125 @@ const Quiz = () => {
           <h1 className="text-4xl font-bold text-gray-800 mb-6">
             Trivia Quiz Game
           </h1>
-          <div className="bg-white shadow-lg rounded-lg w-full max-w-xl relative border border-gray-200">
-            <div
-              className="absolute top-0 left-0 h-1"
-              style={{
-                width: `${(timer / 10) * 100}%`,
-                backgroundColor: timer > 5 ? "green" : "red",
-                transition: "width 1s ease-in-out",
-              }}
-            ></div>
+          <div
+            className="bg-white shadow-lg rounded-lg w-full max-w-xl relative border border-gray-200 mx-auto w-full"
+            style={{ maxWidth: "65%" }}
+          >
+            <div className="">
+              <div
+                className={`text-lg flex items-center border-2 border-black-500 justify-between p-2 px-7 ${scoreUpdateColor}`}
+                style={{ gap: "20px" }}
+              >
+                <h6 className="text-slate-800 font-medium">Trivia Quiz Game</h6>
+                <div className="flex items-center ml-auto">
+                  <CircularTimer timer={timer} isTimerEnded={timerEnded} />
+                  <span className="ml-4">Score: {score}</span>
+                  <h2 className="text-xl font-semibold text-gray-700 mb-0 ml-4">
+                    {currentQuestionIndex} of {numQuestions}
+                  </h2>
+                </div>
+              </div>
 
-            <div className="p-8">
               {question && (
-                <>
-                  <h2 className="text-2xl font-semibold text-gray-700 mb-4">
+                <div className="p-10">
+                  <h2 className="text-2xl font-semibold text-gray-700 mb-4 p-4">
                     {question.question}
                   </h2>
-                  <div className="grid gap-4">
-                    {options.map((option, index) => (
-                      <button
-                        key={index}
-                        onClick={() => handleAnswer(option)}
-                        className={`py-2 px-4 border rounded-lg text-lg transition-colors ${
-                          isAnswered
-                            ? option === question.correctAnswer
-                              ? "bg-green-400 text-white"
-                              : "bg-red-400 text-white"
-                            : "bg-gray-200 hover:bg-gray-300"
-                        } ${
-                          isAnswered &&
-                          option !== question.correctAnswer &&
-                          option ===
-                            answeredQuestions.find(
-                              (q) => q.question === question.question
-                            )?.selectedOption
-                            ? "bg-red-400 text-white"
-                            : ""
-                        }`}
-                        disabled={isAnswered}
-                      >
-                        {option}
-                      </button>
-                    ))}
+                  <div className="grid grid-cols-2 gap-4">
+                    {options.map((option, index) => {
+                      const isCorrect = option === question.correctAnswer;
+                      const isSelected =
+                        isAnswered &&
+                        option ===
+                          answeredQuestions.find(
+                            (q) => q.question === question.question
+                          )?.selectedOption;
+
+                      return (
+                        <motion.button
+                          key={index}
+                          onClick={() => handleAnswer(option)}
+                          animate={
+                            isAnswered && (isCorrect || isSelected)
+                              ? shakeAnimation.visible
+                              : {}
+                          }
+                          initial={isAnswered ? shakeAnimation.hidden : {}}
+                          transition={{ duration: 0.5 }}
+                          className={`py-2 px-4 border rounded-lg text-lg transition-colors ${
+                            isAnswered
+                              ? isCorrect
+                                ? "border-2 border-green-500 text-green-500"
+                                : isSelected
+                                ? "border-2 border-red-500 text-red-500"
+                                : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                              : "bg-gray-200 hover:bg-gray-300"
+                          }`}
+                          disabled={isAnswered}
+                        >
+                          {option}
+                        </motion.button>
+                      );
+                    })}
                   </div>
-                </>
+                </div>
+              )}
+              {(timerEnded || isAnswered) && !gameEnded && (
+                <div className="my-4 mb-6 flex justify-center">
+                  <button
+                    onClick={handleNextQuestion}
+                    className="py-2 px-4 bg-blue-500 hover:bg-blue-600 text-white rounded-lg mt-2 flex items-center"
+                    style={{ gap: "10px" }}
+                  >
+                    Next Question{" "}
+                    <FaLongArrowAltRight style={{ marginTop: "3px" }} />
+                  </button>
+                </div>
               )}
             </div>
           </div>
           {gameEnded && (
-            <div className="mt-6">
+            <div
+              className="mt-6 absolute bg-white border-2 border-gray-200 rounded-lg w-full flex flex-col justify-center items-center"
+              style={{ maxWidth: "63.5%", height: "80%" }}
+            >
               <h2 className="text-2xl font-semibold">
-                Your Score: {score} / {numQuestions}
+                Your Score: {score} / {numQuestions * 400}
               </h2>
               <h3 className="text-lg">{getRemarks()}</h3>
+              <div
+                style={{ width: "100px", height: "100px", marginTop: "20px" }}
+              >
+                <CircularProgressbar
+                  value={(score / (numQuestions * 400)) * 100}
+                  styles={buildStyles({
+                    strokeLinecap: "round",
+                    pathColor: `#3b82f6`,
+                    trailColor: "#d6d6d6",
+                  })}
+                />
+                <svg
+                  width="100"
+                  height="100"
+                  style={{ position: "absolute", top: "38%", left: "48%" }}
+                >
+                  <text
+                    x="20"
+                    y="50"
+                    textAnchor="middle"
+                    fontSize="16"
+                    fill="black"
+                    className="custom-text"
+                    style={{
+                      transform: "rotate(0deg)",
+                      transformOrigin: "center",
+                    }}
+                  >
+                    {`${Math.round((score / (numQuestions * 400)) * 100)}%`}
+                  </text>
+                </svg>
+              </div>
+
               <button
                 onClick={handleViewResults}
                 className="py-2 px-4 bg-blue-500 hover:bg-blue-600 text-white rounded-lg mt-4"
@@ -318,7 +481,8 @@ const Quiz = () => {
               </button>
             </div>
           )}
-          {!gameEnded && (
+
+          {!gameEnded && !timerEnded && (
             <button
               onClick={handleStopGame}
               className="py-2 px-4 bg-red-500 hover:bg-red-600 text-white rounded-lg mt-4"
