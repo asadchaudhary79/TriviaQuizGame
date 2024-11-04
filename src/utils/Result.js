@@ -17,15 +17,18 @@ const Result = () => {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-gray-100 to-gray-300 p-6">
-      <h1 className="text-4xl font-extrabold text-gray-900 mb-8">
+      <h1 className="text-4xl font-bold text-gray-700 mb-8">
         Quiz Results
       </h1>
-      <div className="bg-white shadow-xl rounded-lg p-10 w-full max-w-2xl text-center border border-gray-200">
+      <div
+        className="bg-white shadow-xl rounded-lg p-10 w-full max-w-2xl text-center border border-gray-200"
+        style={{ maxWidth: "64.5%", height: "70%" }}
+      >
         <h2 className="text-2xl font-semibold text-gray-800 mb-4">
           Player: <span className="font-bold text-blue-600">{playerName}</span>
         </h2>
         <p className="text-lg mb-4 font-medium text-gray-700">
-          Score: <span className="font-bold">{score}</span> 
+          Score: <span className="font-bold">{score}</span>
         </p>
         <h3 className="text-xl mb-6 font-medium text-gray-700">
           {score === totalQuestions
